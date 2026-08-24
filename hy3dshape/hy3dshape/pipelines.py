@@ -31,8 +31,10 @@ from .models.autoencoders import ShapeVAE
 from .models.autoencoders import SurfaceExtractors
 from .utils import logger, synchronize_timer, smart_load_model
 
-from comfy.utils import ProgressBar, load_torch_file
+from comfy.utils import ProgressBar
 import comfy.model_management as mm
+
+from .checkpoint import load_hunyuan_checkpoint
 
 
 def retrieve_timesteps(
@@ -176,7 +178,7 @@ class Hunyuan3DDiTPipeline:
         #     ckpt = torch.load(ckpt_path, map_location='cpu', weights_only=True)
 
         config['model']['params']['attention_mode'] = attention_mode
-        ckpt = load_torch_file(ckpt_path)
+        ckpt = load_hunyuan_checkpoint(ckpt_path)
         # load model
         model = instantiate_from_config(config['model'])
         model.load_state_dict(ckpt['model'])

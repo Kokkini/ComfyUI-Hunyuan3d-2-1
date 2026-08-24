@@ -24,6 +24,8 @@ import comfy.model_management as mm
 from comfy.utils import load_torch_file, ProgressBar
 import comfy.utils
 
+from .hy3dshape.hy3dshape.checkpoint import load_hunyuan_checkpoint
+
 
 class _LazyImport:
     """Defer a heavy import until the symbol is first actually used.
@@ -623,7 +625,7 @@ class Hy3D21VAELoader:
 
         model_path = folder_paths.get_full_path("vae", model_name)
 
-        vae_sd = load_torch_file(model_path)
+        vae_sd = load_hunyuan_checkpoint(model_path)
         
         if(vae_config==None):
             vae_config = {
@@ -1281,7 +1283,7 @@ class Hy3D21MeshGenerationBatch:
                 attention_mode=attention_mode)    
 
             vae_model_path = folder_paths.get_full_path("vae", vae_model_name)
-            vae_sd = load_torch_file(vae_model_path)
+            vae_sd = load_hunyuan_checkpoint(vae_model_path)
 
             vae_config = {
                 'num_latents': 4096,
@@ -2034,7 +2036,6 @@ class Hy3D21ModelLoader:
                 repo_id=repo_id,
                 filename=repo_filename,
                 local_dir=target_dir,
-                local_dir_use_symlinks=False,
             )
 
             final_path = os.path.join(target_dir, desired_filename)
@@ -2068,7 +2069,6 @@ class Hy3D21ModelLoader:
                 repo_id=repo_id,
                 filename=repo_filename,
                 local_dir=target_dir,
-                local_dir_use_symlinks=False,
             )
 
             final_path = os.path.join(target_dir, desired_filename)
@@ -2082,7 +2082,7 @@ class Hy3D21ModelLoader:
             except OSError:
                 pass  # not empty, or already gone  
                 
-        vae_sd = load_torch_file(vae_path)
+        vae_sd = load_hunyuan_checkpoint(vae_path)
         
         vae_config = {
             'num_latents': 4096,
