@@ -83,6 +83,35 @@ script_directory = os.path.dirname(os.path.abspath(__file__))
 comfy_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 diffusions_dir = os.path.join(comfy_path, "models", "diffusers")
 
+def _resolve_inpaint_output_folder(output_folder):
+    """Resolve an InPaint output subfolder inside ComfyUI's output directory.
+
+    An empty value writes directly to the configured ComfyUI output directory.
+    Relative values are treated as subfolders of that directory; absolute values
+    are accepted only when they still resolve inside the configured output root.
+    """
+    output_root = Path(folder_paths.get_output_directory()).resolve()
+    requested_folder = str(output_folder or "").strip()
+
+    if not requested_folder or requested_folder in {".", "./", ".\\"}:
+        output_dir = output_root
+    else:
+        requested_path = Path(requested_folder)
+        if requested_path.is_absolute():
+            output_dir = requested_path.resolve()
+        else:
+            output_dir = (output_root / requested_path).resolve()
+
+        try:
+            output_dir.relative_to(output_root)
+        except ValueError as exc:
+            raise ValueError(
+                "output_folder must be empty or a subfolder of ComfyUI's output directory."
+            ) from exc
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir, output_root
+
 def parse_string_to_int_list(number_string):
   """
   Parses a string containing comma-separated numbers into a list of integers.
@@ -520,6 +549,7 @@ class Hy3DInPaint:
                 "mr": ("NPARRAY", ),
                 "mr_mask": ("NPARRAY",),
                 "output_mesh_name": ("STRING",),
+                "output_folder": ("STRING", {"default": "", "multiline": False}),
             },
         }
 
@@ -529,13 +559,15 @@ class Hy3DInPaint:
     CATEGORY = "Hunyuan3D21Wrapper"
     OUTPUT_NODE = True
 
-    def process(self, pipeline, albedo, albedo_mask, mr, mr_mask, output_mesh_name):
+    def process(self, pipeline, albedo, albedo_mask, mr, mr_mask, output_mesh_name, output_folder=""):
         
         #albedo = tensor2pil(albedo)
         #albedo_mask = tensor2pil(albedo_mask)
         #mr = tensor2pil(mr)
         #mr_mask = tensor2pil(mr_mask)       
         
+        output_dir, output_root = _resolve_inpaint_output_folder(output_folder)
+
         vertex_inpaint = True
         method = "NS"       
         
@@ -544,12 +576,12 @@ class Hy3DInPaint:
         pipeline.set_texture_albedo(albedo)
         pipeline.set_texture_mr(mr)
 
-        temp_folder_path = os.path.join(comfy_path, "temp")
-        os.makedirs(temp_folder_path, exist_ok=True)        
-        output_mesh_path = os.path.join(temp_folder_path, f"{output_mesh_name}.obj")
-        output_temp_path = pipeline.save_mesh(output_mesh_path)
+        temp_folder_path = Path(folder_paths.get_temp_directory())
+        temp_folder_path.mkdir(parents=True, exist_ok=True)
+        output_mesh_path = temp_folder_path / f"{output_mesh_name}.obj"
+        output_temp_path = pipeline.save_mesh(str(output_mesh_path))
         
-        output_glb_path = os.path.join(comfy_path, "output", f"{output_mesh_name}.glb")
+        output_glb_path = output_dir / f"{output_mesh_name}.glb"
         shutil.copyfile(output_temp_path, output_glb_path)
         
         trimesh = Trimesh.load(output_glb_path, force="mesh")
@@ -559,7 +591,7 @@ class Hy3DInPaint:
         texture_tensor = pil2tensor(texture_pil)
         texture_mr_tensor = pil2tensor(texture_mr_pil)
         
-        output_glb_path = f"{output_mesh_name}.glb"
+        output_glb_path = os.path.relpath(output_glb_path, output_root)
         
         pipeline.clean_memory()
         
