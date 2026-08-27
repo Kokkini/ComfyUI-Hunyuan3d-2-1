@@ -83,6 +83,31 @@ script_directory = os.path.dirname(os.path.abspath(__file__))
 comfy_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 diffusions_dir = os.path.join(comfy_path, "models", "diffusers")
 
+def _resolve_inpaint_mesh_paths(output_mesh_name):
+    """Resolve the InPaint OBJ and GLB paths from a relative mesh name."""
+    mesh_name = str(output_mesh_name or "").strip()
+    relative_mesh_name = Path(mesh_name.replace("\\", "/"))
+    if not mesh_name or relative_mesh_name in {Path("."), Path("..")}:
+        raise ValueError("output_mesh_name must contain a mesh filename.")
+    if relative_mesh_name.is_absolute():
+        raise ValueError("output_mesh_name must be a relative path.")
+
+    output_root = Path(folder_paths.get_output_directory()).resolve()
+    output_glb_path = (output_root / f"{relative_mesh_name}.glb").resolve()
+    output_obj_path = (output_root / f"{relative_mesh_name}.obj").resolve()
+
+    for candidate in (output_glb_path, output_obj_path):
+        try:
+            candidate.relative_to(output_root)
+        except ValueError as exc:
+            raise ValueError(
+                "output_mesh_name must stay inside ComfyUI's output directory."
+            ) from exc
+
+    output_obj_path.parent.mkdir(parents=True, exist_ok=True)
+    output_glb_path.parent.mkdir(parents=True, exist_ok=True)
+    return output_obj_path, output_glb_path, output_root
+
 def parse_string_to_int_list(number_string):
   """
   Parses a string containing comma-separated numbers into a list of integers.
@@ -536,8 +561,7 @@ class Hy3DInPaint:
         #mr = tensor2pil(mr)
         #mr_mask = tensor2pil(mr_mask)       
         
-        output_root = Path(folder_paths.get_output_directory())
-        output_root.mkdir(parents=True, exist_ok=True)
+        output_mesh_path, output_glb_path, output_root = _resolve_inpaint_mesh_paths(output_mesh_name)
 
         vertex_inpaint = True
         method = "NS"       
@@ -547,13 +571,7 @@ class Hy3DInPaint:
         pipeline.set_texture_albedo(albedo)
         pipeline.set_texture_mr(mr)
 
-        temp_folder_path = Path(folder_paths.get_temp_directory())
-        temp_folder_path.mkdir(parents=True, exist_ok=True)
-        output_mesh_path = temp_folder_path / f"{output_mesh_name}.obj"
-        output_temp_path = pipeline.save_mesh(str(output_mesh_path))
-        
-        output_glb_path = output_root / f"{output_mesh_name}.glb"
-        shutil.copyfile(output_temp_path, output_glb_path)
+        pipeline.save_mesh(str(output_mesh_path))
         
         trimesh = Trimesh.load(output_glb_path, force="mesh")
         
