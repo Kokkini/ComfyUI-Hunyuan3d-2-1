@@ -485,12 +485,8 @@ class Hy3DMultiViewsGenerator:
         paint_pipeline = Hunyuan3DPaintPipeline(conf)
         
         image = tensor2pil(image)
-        
-        temp_folder_path = os.path.join(comfy_path, "temp")
-        os.makedirs(temp_folder_path, exist_ok=True)        
-        temp_output_path = os.path.join(temp_folder_path, "textured_mesh.obj")
-        
-        albedo, mr, normal_maps, position_maps = paint_pipeline(mesh=trimesh, image_path=image, output_mesh_path=temp_output_path, num_steps=steps, guidance_scale=guidance_scale, unwrap=unwrap_mesh, seed=seed)
+
+        albedo, mr, normal_maps, position_maps = paint_pipeline(mesh=trimesh, image_path=image, num_steps=steps, guidance_scale=guidance_scale, unwrap=unwrap_mesh, seed=seed)
         
         albedo_tensor = hy3dpaintimages_to_tensor(albedo)
         mr_tensor = hy3dpaintimages_to_tensor(mr)
@@ -1477,10 +1473,6 @@ class Hy3D21GenerateMultiViewsBatch:
             if nb_pictures>0:                     
                 conf = Hunyuan3DPaintConfig(view_size, camera_config["selected_camera_azims"], camera_config["selected_camera_elevs"], camera_config["selected_view_weights"], camera_config["ortho_scale"], texture_size)                                
                 
-                temp_folder_path = os.path.join(comfy_path, "temp")
-                os.makedirs(temp_folder_path, exist_ok=True)
-                temp_output_path = os.path.join(temp_folder_path, "textured_mesh.obj")
-                
                 pbar = ProgressBar(nb_pictures)
                 for file in files:                    
                     image_name = get_filename_without_extension_os_path(file)                    
@@ -1515,7 +1507,7 @@ class Hy3D21GenerateMultiViewsBatch:
                             trimesh = Trimesh.load(input_meshes[0])      
                             
                             paint_pipeline = Hunyuan3DPaintPipeline(conf)
-                            albedo, mr, normal_maps, position_maps = paint_pipeline(mesh=trimesh, image_path=image, output_mesh_path=temp_output_path, num_steps=steps, guidance_scale=guidance_scale, unwrap=unwrap_mesh, seed=seed)
+                            albedo, mr, normal_maps, position_maps = paint_pipeline(mesh=trimesh, image_path=image, num_steps=steps, guidance_scale=guidance_scale, unwrap=unwrap_mesh, seed=seed)
                             
                             if export_multiviews:
                                 metaData.albedos = []
@@ -1618,9 +1610,8 @@ class Hy3D21GenerateMultiViewsBatch:
                             paint_pipeline.set_texture_albedo(albedo)
                             paint_pipeline.set_texture_mr(mr)
                             
-                            output_mesh_path = os.path.join(comfy_path, "temp", f"{output_file_name}.obj")
-                            output_temp_path = paint_pipeline.save_mesh(output_mesh_path)                   
-                            shutil.copyfile(output_temp_path, output_glb_path)
+                            output_mesh_path = output_glb_path.with_suffix('.obj')
+                            paint_pipeline.save_mesh(str(output_mesh_path))
                             metaData.mesh_file = f'{output_file_name}.glb'
                             
                             if export_metadata:
@@ -1782,11 +1773,7 @@ class Hy3D21MultiViewsGeneratorWithMetaData:
         
         image = tensor2pil(image)
         
-        temp_folder_path = os.path.join(comfy_path, "temp")
-        os.makedirs(temp_folder_path, exist_ok=True)        
-        temp_output_path = os.path.join(temp_folder_path, "textured_mesh.obj")
-        
-        albedo, mr, normal_maps, position_maps = paint_pipeline(mesh=trimesh, image_path=image, output_mesh_path=temp_output_path, num_steps=steps, guidance_scale=guidance_scale, unwrap=unwrap_mesh, seed=seed)
+        albedo, mr, normal_maps, position_maps = paint_pipeline(mesh=trimesh, image_path=image, num_steps=steps, guidance_scale=guidance_scale, unwrap=unwrap_mesh, seed=seed)
         
         albedo_tensor = hy3dpaintimages_to_tensor(albedo)
         mr_tensor = hy3dpaintimages_to_tensor(mr)
