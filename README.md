@@ -145,11 +145,11 @@ python_embeded\python.exe -m pip install .\xatlas-python\
 
 ---
 
-## 📁 InPaint Output Location
+## 📁 Saving Painted Meshes
 
-The `Hunyuan 3D 2.1 InPaint` node always saves the final painted GLB in ComfyUI's configured `output` directory. `OutputMeshName` controls the filename and may include relative subfolders, for example `mesh/hy_mesh` produces `output/mesh/hy_mesh.glb`.
+`Hunyuan 3D 2.1 InPaint` applies the painted textures and returns the updated pipeline. It does not write a file by itself.
 
-The renderer writes the OBJ, material file, texture maps, and final GLB directly into the output folder. Absolute paths and paths that escape ComfyUI's output directory are rejected. The returned mesh path is relative to ComfyUI's output directory so it can be consumed by preview and file nodes.
+Connect its `pipeline` output to `Hunyuan 3D 2.1 Save Painted Mesh`. The save node writes the textured OBJ, material file, texture maps, and final GLB directly into ComfyUI's configured `output` directory. Its `filename_prefix` follows ComfyUI's normal numbering, so repeated runs produce names such as `3D/Hy3D_00001_.glb`, `3D/Hy3D_00002_.glb`, and so on. The returned relative `glb_path` can be connected to `Preview3D` or another file node.
 
 ---
 

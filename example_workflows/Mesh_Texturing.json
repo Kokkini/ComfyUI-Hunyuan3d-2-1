@@ -1,8 +1,8 @@
 {
   "id": "5ad4bf3d-e612-4571-8502-0a19e6b7a824",
   "revision": 0,
-  "last_node_id": 69,
-  "last_link_id": 145,
+  "last_node_id": 70,
+  "last_link_id": 146,
   "nodes": [
     {
       "id": 9,
@@ -448,15 +448,10 @@
           ]
         },
         {
-          "name": "trimesh",
-          "type": "TRIMESH",
-          "links": null
-        },
-        {
-          "name": "output_glb_path",
-          "type": "STRING",
+          "name": "pipeline",
+          "type": "HY3DPIPELINE",
           "links": [
-            141
+            146
           ]
         }
       ],
@@ -466,9 +461,7 @@
         "widget_ue_connectable": {},
         "Node name for S&R": "Hy3DInPaint"
       },
-      "widgets_values": [
-        "CyberWarrior_8"
-      ]
+      "widgets_values": []
     },
     {
       "id": 40,
@@ -578,6 +571,53 @@
         "widget_ue_connectable": {},
         "Node name for S&R": "Hy3D21MeshUVWrap"
       }
+    },
+    {
+      "id": 70,
+      "type": "Hy3D21SavePaintedMesh",
+      "pos": [
+        716.0293273925781,
+        877.179443359375
+      ],
+      "size": [
+        300,
+        90
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipeline",
+          "type": "HY3DPIPELINE",
+          "link": 146
+        },
+        {
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "glb_path",
+          "type": "STRING",
+          "links": [
+            141
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "visualbruno/ComfyUI-Hunyuan3d-2-1",
+        "Node name for S&R": "Hy3D21SavePaintedMesh",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "CyberWarrior_8"
+      ]
     }
   ],
   "links": [
@@ -703,8 +743,8 @@
     ],
     [
       141,
-      66,
-      3,
+      70,
+      0,
       36,
       1,
       "STRING"
@@ -724,6 +764,14 @@
       56,
       0,
       "TRIMESH"
+    ],
+    [
+      146,
+      66,
+      2,
+      70,
+      0,
+      "HY3DPIPELINE"
     ]
   ],
   "groups": [],

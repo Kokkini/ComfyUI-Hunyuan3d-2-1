@@ -83,30 +83,22 @@ script_directory = os.path.dirname(os.path.abspath(__file__))
 comfy_path = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 diffusions_dir = os.path.join(comfy_path, "models", "diffusers")
 
-def _resolve_inpaint_mesh_paths(output_mesh_name):
-    """Resolve the InPaint OBJ and GLB paths from a relative mesh name."""
-    mesh_name = str(output_mesh_name or "").strip()
-    relative_mesh_name = Path(mesh_name.replace("\\", "/"))
-    if not mesh_name or relative_mesh_name in {Path("."), Path("..")}:
-        raise ValueError("output_mesh_name must contain a mesh filename.")
-    if relative_mesh_name.is_absolute():
-        raise ValueError("output_mesh_name must be a relative path.")
+def _get_numbered_painted_mesh_paths(filename_prefix):
+    """Return numbered OBJ/GLB paths under ComfyUI's configured output folder."""
+    if not str(filename_prefix or "").strip():
+        raise ValueError("filename_prefix must contain a mesh filename.")
 
-    output_root = Path(folder_paths.get_output_directory()).resolve()
-    output_glb_path = (output_root / f"{relative_mesh_name}.glb").resolve()
-    output_obj_path = (output_root / f"{relative_mesh_name}.obj").resolve()
+    output_folder, filename, counter, subfolder, _ = folder_paths.get_save_image_path(
+        filename_prefix, folder_paths.get_output_directory()
+    )
+    output_folder = Path(output_folder)
+    output_folder.mkdir(parents=True, exist_ok=True)
 
-    for candidate in (output_glb_path, output_obj_path):
-        try:
-            candidate.relative_to(output_root)
-        except ValueError as exc:
-            raise ValueError(
-                "output_mesh_name must stay inside ComfyUI's output directory."
-            ) from exc
-
-    output_obj_path.parent.mkdir(parents=True, exist_ok=True)
-    output_glb_path.parent.mkdir(parents=True, exist_ok=True)
-    return output_obj_path, output_glb_path, output_root
+    numbered_stem = f"{filename}_{counter:05}_"
+    output_obj_path = output_folder / f"{numbered_stem}.obj"
+    output_glb_path = output_folder / f"{numbered_stem}.glb"
+    relative_glb_path = Path(subfolder) / output_glb_path.name
+    return output_obj_path, output_glb_path, relative_glb_path
 
 def parse_string_to_int_list(number_string):
   """
@@ -540,24 +532,20 @@ class Hy3DInPaint:
                 "albedo_mask": ("NPARRAY", ),
                 "mr": ("NPARRAY", ),
                 "mr_mask": ("NPARRAY",),
-                "output_mesh_name": ("STRING",),
             },
         }
 
-    RETURN_TYPES = ("IMAGE","IMAGE","TRIMESH", "STRING",)
-    RETURN_NAMES = ("albedo", "mr", "trimesh", "output_glb_path")
+    RETURN_TYPES = ("IMAGE", "IMAGE", "HY3DPIPELINE",)
+    RETURN_NAMES = ("albedo", "mr", "pipeline")
     FUNCTION = "process"
     CATEGORY = "Hunyuan3D21Wrapper"
-    OUTPUT_NODE = True
 
-    def process(self, pipeline, albedo, albedo_mask, mr, mr_mask, output_mesh_name):
+    def process(self, pipeline, albedo, albedo_mask, mr, mr_mask):
         
         #albedo = tensor2pil(albedo)
         #albedo_mask = tensor2pil(albedo_mask)
         #mr = tensor2pil(mr)
         #mr_mask = tensor2pil(mr_mask)       
-        
-        output_mesh_path, output_glb_path, output_root = _resolve_inpaint_mesh_paths(output_mesh_name)
 
         vertex_inpaint = True
         method = "NS"       
@@ -566,27 +554,49 @@ class Hy3DInPaint:
         
         pipeline.set_texture_albedo(albedo)
         pipeline.set_texture_mr(mr)
-
-        pipeline.save_mesh(str(output_mesh_path))
-        
-        trimesh = Trimesh.load(output_glb_path, force="mesh")
         
         texture_pil = convert_ndarray_to_pil(albedo)
         texture_mr_pil = convert_ndarray_to_pil(mr)
         texture_tensor = pil2tensor(texture_pil)
         texture_mr_tensor = pil2tensor(texture_mr_pil)
-        
-        output_glb_path = os.path.relpath(output_glb_path, output_root)
-        
-        pipeline.clean_memory()
-        
-        del pipeline
-        
-        mm.soft_empty_cache()
-        torch.cuda.empty_cache()
-        gc.collect()        
-        
-        return (texture_tensor, texture_mr_tensor, trimesh, output_glb_path)         
+
+        return (texture_tensor, texture_mr_tensor, pipeline)
+
+
+class Hy3D21SavePaintedMesh:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "pipeline": ("HY3DPIPELINE",),
+                "filename_prefix": ("STRING", {"default": "3D/Hy3D"}),
+            },
+        }
+
+    RETURN_TYPES = ("STRING",)
+    RETURN_NAMES = ("glb_path",)
+    FUNCTION = "process"
+    CATEGORY = "Hunyuan3D21Wrapper"
+    OUTPUT_NODE = True
+
+    def process(self, pipeline, filename_prefix):
+        output_obj_path, output_glb_path, relative_glb_path = _get_numbered_painted_mesh_paths(
+            filename_prefix
+        )
+
+        try:
+            pipeline.save_mesh(str(output_obj_path))
+            if not output_glb_path.is_file():
+                raise RuntimeError(
+                    f"Hunyuan painted mesh export did not create the expected GLB: {output_glb_path}"
+                )
+        finally:
+            pipeline.clean_memory()
+            mm.soft_empty_cache()
+            torch.cuda.empty_cache()
+            gc.collect()
+
+        return (str(relative_glb_path),)
         
 class Hy3D21CameraConfig:
     @classmethod
@@ -2183,6 +2193,7 @@ NODE_CLASS_MAPPINGS = {
     "Hy3DMultiViewsGenerator": Hy3DMultiViewsGenerator,
     "Hy3DBakeMultiViews": Hy3DBakeMultiViews,
     "Hy3DInPaint": Hy3DInPaint,
+    "Hy3D21SavePaintedMesh": Hy3D21SavePaintedMesh,
     "Hy3D21CameraConfig": Hy3D21CameraConfig,
     "Hy3D21VAELoader": Hy3D21VAELoader,
     "Hy3D21VAEDecode": Hy3D21VAEDecode,
@@ -2213,6 +2224,7 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Hy3DMultiViewsGenerator": "Hunyuan 3D 2.1 MultiViews Generator",
     "Hy3DBakeMultiViews": "Hunyuan 3D 2.1 Bake MultiViews",
     "Hy3DInPaint": "Hunyuan 3D 2.1 InPaint",
+    "Hy3D21SavePaintedMesh": "Hunyuan 3D 2.1 Save Painted Mesh",
     "Hy3D21CameraConfig": "Hunyuan 3D 2.1 Camera Config",
     "Hy3D21VAELoader": "Hunyuan 3D 2.1 VAE Loader",
     "Hy3D21VAEDecode": "Hunyuan 3D 2.1 VAE Decoder",

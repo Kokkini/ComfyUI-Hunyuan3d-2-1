@@ -1,8 +1,8 @@
 {
   "id": "bc18a8e6-cbd2-4430-8960-07768c9001d2",
   "revision": 0,
-  "last_node_id": 42,
-  "last_link_id": 54,
+  "last_node_id": 43,
+  "last_link_id": 55,
   "nodes": [
     {
       "id": 6,
@@ -1634,15 +1634,10 @@
           "links": []
         },
         {
-          "name": "trimesh",
-          "type": "TRIMESH",
-          "links": null
-        },
-        {
-          "name": "output_glb_path",
-          "type": "STRING",
+          "name": "pipeline",
+          "type": "HY3DPIPELINE",
           "links": [
-            14
+            55
           ]
         }
       ],
@@ -1652,9 +1647,7 @@
         "Node name for S&R": "Hy3DInPaint",
         "widget_ue_connectable": {}
       },
-      "widgets_values": [
-        "Centurion_Hy21_10K"
-      ]
+      "widgets_values": []
     },
     {
       "id": 8,
@@ -1711,6 +1704,53 @@
       "widgets_values": [
         "Centurion_Hy21_10K.glb",
         ""
+      ]
+    },
+    {
+      "id": 43,
+      "type": "Hy3D21SavePaintedMesh",
+      "pos": [
+        1138.6650390625,
+        1121.6439208984375
+      ],
+      "size": [
+        300,
+        90
+      ],
+      "flags": {},
+      "order": 36,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pipeline",
+          "type": "HY3DPIPELINE",
+          "link": 55
+        },
+        {
+          "name": "filename_prefix",
+          "type": "STRING",
+          "widget": {
+            "name": "filename_prefix"
+          },
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "glb_path",
+          "type": "STRING",
+          "links": [
+            14
+          ]
+        }
+      ],
+      "properties": {
+        "aux_id": "visualbruno/ComfyUI-Hunyuan3d-2-1",
+        "Node name for S&R": "Hy3D21SavePaintedMesh",
+        "widget_ue_connectable": {}
+      },
+      "widgets_values": [
+        "Centurion_Hy21_10K"
       ]
     }
   ],
@@ -1773,8 +1813,8 @@
     ],
     [
       14,
-      7,
-      3,
+      43,
+      0,
       8,
       1,
       "STRING"
@@ -2058,6 +2098,14 @@
       10,
       3,
       "IMAGE"
+    ],
+    [
+      55,
+      7,
+      2,
+      43,
+      0,
+      "HY3DPIPELINE"
     ]
   ],
   "groups": [],
