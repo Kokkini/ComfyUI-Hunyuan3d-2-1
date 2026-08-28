@@ -596,7 +596,18 @@ class Hy3D21SavePaintedMesh:
             torch.cuda.empty_cache()
             gc.collect()
 
-        return (str(relative_glb_path),)
+        return {
+            "ui": {
+                "meshes": [
+                    {
+                        "filename": output_glb_path.name,
+                        "subfolder": relative_glb_path.parent.as_posix(),
+                        "type": "output",
+                    }
+                ]
+            },
+            "result": (str(relative_glb_path),),
+        }
         
 class Hy3D21CameraConfig:
     @classmethod

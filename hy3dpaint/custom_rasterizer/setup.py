@@ -14,6 +14,7 @@
 
 from setuptools import setup, find_packages
 from pathlib import Path
+import sys
 import torch
 from torch.utils.cpp_extension import BuildExtension, CUDAExtension, CppExtension
 
@@ -29,6 +30,11 @@ cuda_dependency_includes = [
     if (site_packages / "nvidia" / package / "include").is_dir()
 ]
 
+compile_args = {
+    "cxx": ["/O2"] if sys.platform == "win32" else ["-O3", "-fPIC"],
+    "nvcc": ["-O3"],
+}
+
 custom_rasterizer_module = CUDAExtension(
     "custom_rasterizer_kernel",
     [
@@ -36,12 +42,7 @@ custom_rasterizer_module = CUDAExtension(
         "lib/custom_rasterizer_kernel/grid_neighbor.cpp",
         "lib/custom_rasterizer_kernel/rasterizer_gpu.cu",
     ],
-    extra_compile_args={
-        # PyTorch's Windows extension builder supplies /std:c++17.  Keep the
-        # host compiler flags in MSVC syntax so they are not silently ignored.
-        "cxx": ["/O2"],
-        "nvcc": ["-O3"],
-    },
+    extra_compile_args=compile_args,
     include_dirs=cuda_dependency_includes,
 )
 

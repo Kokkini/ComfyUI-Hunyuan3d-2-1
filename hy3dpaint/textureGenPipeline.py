@@ -56,8 +56,10 @@ class Hunyuan3DPaintConfig:
 
         self.multiview_cfg_path = cfg_path
         self.custom_pipeline = "hunyuanpaintpbr"
-        self.multiview_pretrained_path = "tencent/Hunyuan3D-2.1"
-        self.dino_ckpt_path = "facebook/dinov2-giant"
+        self.multiview_pretrained_path = os.getenv(
+            "HUNYUAN3D_PAINT_MODEL", "tencent/Hunyuan3D-2.1"
+        )
+        self.dino_ckpt_path = os.getenv("HUNYUAN3D_DINO_MODEL", "facebook/dinov2-giant")
         self.realesrgan_ckpt_path = "ckpt/RealESRGAN_x4plus.pth"
 
         self.raster_mode = "cr"
